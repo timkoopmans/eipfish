@@ -1,0 +1,46 @@
+service: eipfish
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: go1.x
+  lambdaHashingVersion: 20201221
+  region: us-west-2
+  memorySize: 128
+
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "ec2:AllocateAddress"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "ec2:ReleaseAddress"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "s3:ListBucket"
+      Resource: "arn:aws:s3:::${env:BUCKET_NAME}"
+    - Effect: "Allow"
+      Action:
+        - "s3:*Object"
+      Resource: "arn:aws:s3:::${env:BUCKET_NAME}/*"
+package:
+  exclude:
+    - ./**
+  include:
+    - ./bin/**
+
+functions:
+  fish:
+    handler: bin/handler
+    environment:
+      BUCKET_NAME: ${env:BUCKET_NAME}
+      WEBHOOK_URL: ${env:WEBHOOK_URL}
+    events:
+      - schedule:
+          rate: rate(10 minutes)
+          enabled: true
+          input:
+            region: us-west-2
+            bucket: ${env:BUCKET_NAME}
