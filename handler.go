@@ -101,10 +101,6 @@ func findTargetsOnS3(region string, publicIp string) bool {
 	firstOctet := strings.Split(publicIp, ".")[0]
 	key := "rdns/rdns." + firstOctet + ".0.0.0.json.gz"
 
-	if firstOctet == "50" || firstOctet == "44" {
-		key = "rdns/2020-12-30-1609286699-rdns.json.gz"
-	}
-
 	sess, err := session.NewSession()
 	if err != nil {
 		logErrorf("Unable to establish session in region %q, %v", region, err)
