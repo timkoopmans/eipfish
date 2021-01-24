@@ -100,7 +100,7 @@ func releaseAddress(region string, publicIp string, allocationId string) {
 			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == "InvalidAllocationID.NotFound" {
 				exitErrorf("Allocation ID %s does not exist", allocationId)
 			}
-			exitErrorf("Unable to release IP address for allocation %s, %v", allocationId, err)
+			exitErrorf("Unable to release IP address for allocation %s: %v", allocationId, err)
 		}
 
 		log.Printf("Released %s from allocation ID %s\n", publicIp, allocationId)
@@ -115,7 +115,7 @@ func findTargetsOnS3(publicIp string) bool {
 
 	sess, err := session.NewSession()
 	if err != nil {
-		logErrorf("Unable to establish session in region %q, %v", os.Getenv("BUCKET_REGION"), err)
+		logErrorf("Unable to establish session in region %q: %v", os.Getenv("BUCKET_REGION"), err)
 		return false
 	}
 
@@ -139,7 +139,7 @@ func findTargetsOnS3(publicIp string) bool {
 
 	out, err := svc.SelectObjectContent(input)
 	if err != nil {
-		logErrorf("Unable to select object content for key %q, %v", key, err)
+		logErrorf("Unable to select object content for key %q: %v", key, err)
 		return false
 	}
 	defer out.EventStream.Close()
@@ -176,7 +176,7 @@ func findTargetsOnShodan(publicIp string) bool {
 
 	result, err := client.Host(ctx, hostSearch)
 	if err != nil {
-		logErrorf("Error searching Shodan for %s: %v", publicIp, err)
+		logErrorf("Unable to search Shodan for %s: %v", publicIp, err)
 		return false
 	}
 
@@ -197,7 +197,7 @@ func findTargetsOnShodan(publicIp string) bool {
 	for _, uniqueHostname := range uniqueHostnames {
 		currentIPs, err := net.LookupIP(uniqueHostname)
 		if err != nil {
-			logErrorf("Unable to lookup IP %v", err)
+			logErrorf("Unable to lookup IP %s: %v", publicIp, err)
 		}
 
 		for _, ipAddress := range currentIPs {
