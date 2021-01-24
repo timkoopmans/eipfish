@@ -195,6 +195,12 @@ func findTargetsOnShodan(publicIp string) bool {
 	}
 
 	for _, uniqueHostname := range uniqueHostnames {
+		re := regexp.MustCompile("amazonaws|cloudfront")
+		res := re.MatchString(uniqueHostname)
+		if res {
+			return false
+		}
+
 		currentIPs, err := net.LookupIP(uniqueHostname)
 		if err != nil {
 			logErrorf("Unable to lookup IP %s: %v", publicIp, err)
