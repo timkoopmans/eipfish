@@ -176,7 +176,7 @@ func findTargetsOnShodan(publicIp string) bool {
 
 	result, err := client.Host(ctx, hostSearch)
 	if err != nil {
-		logErrorf("Unable to search Shodan for %s: %v", publicIp, err)
+		log.Println("Unable to search Shodan for %s: %v", publicIp, err)
 		return false
 	}
 

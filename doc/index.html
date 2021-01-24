@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>
+        correkt.horse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="subdomain takeover by correkt.horse">
+    <meta name="container" content="docker run -d -p 80:80 --name squark -v /root/squark.com.au:/usr/share/nginx/html:ro nginx">
+    <style>
+        body {background-color:#ffffff;background-repeat:no-repeat;background-position:top left;background-attachment:fixed;}
+        h1{font-family:Arial, sans-serif;color:#000000;background-color:#ffffff;}
+        p {font-family:Georgia, serif;font-size:14px;font-style:normal;font-weight:normal;color:#000000;background-color:#ffffff;}
+    </style>
+</head>
+<body>
+<h1>Subdomain Takeover</h1>
+<p>Hello, I am an independent security researcher, and this is a courtesy message to let you know that the subdomain $TARGET has Name Server records that point to an AWS EC2 Elastic IP address.</p>
+<p></p>
+<p>These addresses will be deleted but your NS records still point to it.
+</p>
+<p>For proof of concept, please visit http://$TARGET</p>
+<p></p>
+<p>This is considered a high impact issue as I can run any service on any port at this subdomain. I can potentially read cookies set from the main domain, perform cross-site scripting, or circumvent content security policies, thereby enabling the ability to capture protected information or send malicious content to unsuspecting users.</p>
+<p></p>
+<p>For more information about subdomain takeovers please refer to: </p>
+<p>https://developer.mozilla.org/en-US/docs/Web/Security/Subdomain_takeovers</p>
+<p></p>
+</body>
+</html>
