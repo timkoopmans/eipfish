@@ -8,6 +8,7 @@ provider:
   lambdaHashingVersion: 20201221
   region: us-west-2
   memorySize: 128
+  timeout: 60
 
   iamRoleStatements:
     - Effect: "Allow"
@@ -42,7 +43,7 @@ functions:
       SHODAN_API_KEY: ${env:SHODAN_API_KEY}
     events:
       - schedule:
-          rate: rate(10 minutes)
+          rate: rate(6 minutes)
           enabled: true
           input:
             region: ap-southeast-2

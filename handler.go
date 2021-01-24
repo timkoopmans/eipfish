@@ -176,7 +176,7 @@ func findTargetsOnShodan(publicIp string) bool {
 
 	result, err := client.Host(ctx, hostSearch)
 	if err != nil {
-		logErrorf("Error searching Shodan, %v", err)
+		logErrorf("Error searching Shodan for %s: %v", publicIp, err)
 		return false
 	}
 
@@ -198,7 +198,6 @@ func findTargetsOnShodan(publicIp string) bool {
 		currentIPs, err := net.LookupIP(uniqueHostname)
 		if err != nil {
 			logErrorf("Unable to lookup IP %v", err)
-			return false
 		}
 
 		for _, ipAddress := range currentIPs {
