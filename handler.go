@@ -9,11 +9,18 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"log"
+	"net"
+
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"context"
+	"github.com/shadowscatcher/shodan"
+	"github.com/shadowscatcher/shodan/search"
 	"github.com/slack-go/slack"
 	"os"
 )
@@ -36,15 +43,21 @@ type Record struct {
 
 func main() {
 	lambda.Start(Handler)
+	//Debug()
+}
+
+func Debug() {
+	publicIp := "52.89.70.92"
+	findTargetsOnShodan(publicIp)
 }
 
 func Handler(event Event) (Result, error){
 	region := event.Region
 	publicIp, allocationId := allocateAddress(region)
 
-	fmt.Printf("Checking %s from allocation ID %s\n", publicIp, allocationId)
+	log.Printf("Checking %s from allocation ID %s\n", publicIp, allocationId)
 
-	if findTargetsOnS3(region, publicIp) {
+	if findTargetsOnShodan(publicIp) || findTargetsOnS3(publicIp) {
 		return Result{Message: fmt.Sprintf("found target on %s", publicIp)}, nil
 	} else {
 		releaseAddress(region, publicIp, allocationId)
@@ -87,28 +100,27 @@ func releaseAddress(region string, publicIp string, allocationId string) {
 			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == "InvalidAllocationID.NotFound" {
 				exitErrorf("Allocation ID %s does not exist", allocationId)
 			}
-			exitErrorf("Unable to release IP address for allocation %s, %v",
-				allocationId, err)
+			exitErrorf("Unable to release IP address for allocation %s, %v", allocationId, err)
 		}
 
-		fmt.Printf("Released %s from allocation ID %s\n", publicIp, allocationId)
+		log.Printf("Released %s from allocation ID %s\n", publicIp, allocationId)
 	} else {
-		fmt.Printf("No allocation ID to release for %s\n", publicIp)
+		log.Printf("No allocation ID to release for %s\n", publicIp)
 	}
 }
 
-func findTargetsOnS3(region string, publicIp string) bool {
+func findTargetsOnS3(publicIp string) bool {
 	firstOctet := strings.Split(publicIp, ".")[0]
 	key := "rdns/rdns." + firstOctet + ".0.0.0.json.gz"
 
 	sess, err := session.NewSession()
 	if err != nil {
-		logErrorf("Unable to establish session in region %q, %v", region, err)
+		logErrorf("Unable to establish session in region %q, %v", os.Getenv("BUCKET_REGION"), err)
 		return false
 	}
 
 	svc := s3.New(sess, &aws.Config{
-		Region: aws.String(region),
+		Region: aws.String(os.Getenv("BUCKET_REGION")),
 	})
 
 	input := &s3.SelectObjectContentInput{
@@ -135,7 +147,7 @@ func findTargetsOnS3(region string, publicIp string) bool {
 	for evt := range out.EventStream.Events() {
 		switch e := evt.(type) {
 		case *s3.RecordsEvent:
-			fmt.Println(string(e.Payload))
+			log.Println(string(e.Payload))
 			var record Record
 			json.Unmarshal(e.Payload, &record)
 
@@ -149,6 +161,54 @@ func findTargetsOnS3(region string, publicIp string) bool {
 			return true
 		}
 	}
+	return false
+}
+
+func findTargetsOnShodan(publicIp string) bool {
+	apiKey := os.Getenv("SHODAN_API_KEY")
+	client, _ := shodan.GetClient(apiKey, http.DefaultClient, true)
+	ctx := context.Background()
+	hostSearch := search.HostParams{
+		Minify: false,
+		History: true,
+		IP: publicIp,
+	}
+
+	result, err := client.Host(ctx, hostSearch)
+	if err != nil {
+		logErrorf("Error searching Shodan, %v", err)
+		return false
+	}
+
+	hostnames := make(map[string]bool)
+
+	for _, service := range result.Services {
+		hostname := service.Shodan.Options.Hostname
+		if len(hostname) > 0 {
+			hostnames[hostname] = true
+		}
+	}
+
+	uniqueHostnames := make([]string, 0, len(hostnames))
+	for key := range hostnames {
+		uniqueHostnames = append(uniqueHostnames, key)
+	}
+
+	for _, uniqueHostname := range uniqueHostnames {
+		currentIPs, err := net.LookupIP(uniqueHostname)
+		if err != nil {
+			logErrorf("Unable to lookup IP %v", err)
+			return false
+		}
+
+		for _, ipAddress := range currentIPs {
+			if ipAddress.Equal(net.ParseIP(publicIp)) {
+				notifySlack("<!channel> :fishing_pole_and_fish: found a target: " + uniqueHostname + " at: " + publicIp, "good")
+				return true
+			}
+		}
+	}
+
 	return false
 }
 
@@ -180,12 +240,12 @@ func notifySlack(message string, color string) {
 func logErrorf(msg string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, msg+"\n", args...)
 	message := fmt.Sprintf(msg+"\n", args...)
-	notifySlack("<!channel> :rotating_light: problems with lambda: " + message, "bad")
+	notifySlack("<!channel> :warning: " + message, "bad")
 }
 
 func exitErrorf(msg string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, msg+"\n", args...)
 	message := fmt.Sprintf(msg+"\n", args...)
-	notifySlack("<!channel> :rotating_light: problems with lambda: " + message, "bad")
+	notifySlack("<!channel> :rotating_light: " + message, "bad")
 	os.Exit(1)
 }
