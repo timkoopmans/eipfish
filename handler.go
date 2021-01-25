@@ -56,16 +56,16 @@ func Handler(event Event) (Result, error){
 	region := event.Region
 	publicIp, allocationId := allocateAddress(region)
 
-	log.Printf("Checking %s from allocation ID %s\n", publicIp, allocationId)
+	log.Printf("Checking %s from allocation ID %s in regbion %s\n", publicIp, allocationId, region)
 
 	if findTargetsOnShodan(region, publicIp) {
-		return Result{Message: fmt.Sprintf("found target on %s", publicIp)}, nil
+		return Result{Message: fmt.Sprintf("found target on %s in region %s", publicIp, region)}, nil
 	} else {
 		releaseAddress(region, publicIp, allocationId)
-		return Result{Message: fmt.Sprintf("no matches on %s", publicIp)}, nil
+		return Result{Message: fmt.Sprintf("no matches on %s in region %s", publicIp, region)}, nil
 	}
 
-	return Result{Message: fmt.Sprintf("processed %s", publicIp)}, nil
+	return Result{Message: fmt.Sprintf("processed %s in region %s", publicIp, region)}, nil
 }
 
 func allocateAddress(region string)  (string, string) {
