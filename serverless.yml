@@ -43,7 +43,7 @@ functions:
       SHODAN_API_KEY: ${env:SHODAN_API_KEY}
     events:
       - schedule:
-          rate: rate(6 minutes)
+          rate: rate(3 minutes)
           enabled: true
           input:
             region: ap-southeast-2
