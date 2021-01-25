@@ -203,7 +203,7 @@ func findTargetsOnShodan(publicIp string) bool {
 
 		currentIPs, err := net.LookupIP(uniqueHostname)
 		if err != nil {
-			logErrorf("Unable to lookup IP %s: %v", publicIp, err)
+			logErrorf("Fish got away on EIP %s: %v", publicIp, err)
 		}
 
 		for _, ipAddress := range currentIPs {
