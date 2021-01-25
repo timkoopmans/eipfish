@@ -198,7 +198,7 @@ func findTargetsOnShodan(publicIp string) bool {
 		re := regexp.MustCompile("amazonaws|cloudfront")
 		res := re.MatchString(uniqueHostname)
 		if res {
-			return false
+			continue
 		}
 
 		currentIPs, err := net.LookupIP(uniqueHostname)
