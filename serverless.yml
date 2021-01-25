@@ -34,7 +34,7 @@ package:
     - ./bin/**
 
 functions:
-  fish:
+  barramundi:
     handler: bin/handler
     environment:
       BUCKET_NAME: ${env:BUCKET_NAME}
@@ -47,4 +47,32 @@ functions:
           enabled: true
           input:
             region: ap-southeast-2
+            bucket: ${env:BUCKET_NAME}
+  sturgeon:
+    handler: bin/handler
+    environment:
+      BUCKET_NAME: ${env:BUCKET_NAME}
+      BUCKET_REGION: ${env:BUCKET_REGION}
+      WEBHOOK_URL: ${env:WEBHOOK_URL}
+      SHODAN_API_KEY: ${env:SHODAN_API_KEY}
+    events:
+      - schedule:
+          rate: rate(3 minutes)
+          enabled: true
+          input:
+            region: us-west-2
+            bucket: ${env:BUCKET_NAME}
+  bass:
+    handler: bin/handler
+    environment:
+      BUCKET_NAME: ${env:BUCKET_NAME}
+      BUCKET_REGION: ${env:BUCKET_REGION}
+      WEBHOOK_URL: ${env:WEBHOOK_URL}
+      SHODAN_API_KEY: ${env:SHODAN_API_KEY}
+    events:
+      - schedule:
+          rate: rate(3 minutes)
+          enabled: true
+          input:
+            region: us-east-1
             bucket: ${env:BUCKET_NAME}

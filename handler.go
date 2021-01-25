@@ -48,7 +48,8 @@ func main() {
 
 func Debug() {
 	publicIp := "52.89.70.92"
-	findTargetsOnShodan(publicIp)
+	region := "ap-southeast-2"
+	findTargetsOnShodan(region, publicIp)
 }
 
 func Handler(event Event) (Result, error){
@@ -57,7 +58,7 @@ func Handler(event Event) (Result, error){
 
 	log.Printf("Checking %s from allocation ID %s\n", publicIp, allocationId)
 
-	if findTargetsOnShodan(publicIp) {
+	if findTargetsOnShodan(region, publicIp) {
 		return Result{Message: fmt.Sprintf("found target on %s", publicIp)}, nil
 	} else {
 		releaseAddress(region, publicIp, allocationId)
@@ -164,7 +165,7 @@ func findTargetsOnS3(publicIp string) bool {
 	return false
 }
 
-func findTargetsOnShodan(publicIp string) bool {
+func findTargetsOnShodan(region string, publicIp string) bool {
 	apiKey := os.Getenv("SHODAN_API_KEY")
 	client, _ := shodan.GetClient(apiKey, http.DefaultClient, true)
 	ctx := context.Background()
@@ -208,7 +209,7 @@ func findTargetsOnShodan(publicIp string) bool {
 
 		for _, ipAddress := range currentIPs {
 			if ipAddress.Equal(net.ParseIP(publicIp)) {
-				notifySlack("<!channel> :fishing_pole_and_fish: found a target: " + uniqueHostname + " at: " + publicIp, "good")
+				notifySlack("<!channel> :fishing_pole_and_fish: caught a fish in " + region + " at " + uniqueHostname + " on " + publicIp, "good")
 				return true
 			}
 		}
