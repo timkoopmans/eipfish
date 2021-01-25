@@ -56,7 +56,7 @@ func Handler(event Event) (Result, error){
 	region := event.Region
 	publicIp, allocationId := allocateAddress(region)
 
-	log.Printf("Checking %s from allocation ID %s in regbion %s\n", publicIp, allocationId, region)
+	log.Printf("Checking %s from allocation ID %s in region %s\n", publicIp, allocationId, region)
 
 	if findTargetsOnShodan(region, publicIp) {
 		return Result{Message: fmt.Sprintf("found target on %s in region %s", publicIp, region)}, nil
