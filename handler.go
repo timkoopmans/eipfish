@@ -57,7 +57,7 @@ func Handler(event Event) (Result, error){
 
 	log.Printf("Checking %s from allocation ID %s\n", publicIp, allocationId)
 
-	if findTargetsOnShodan(publicIp) || findTargetsOnS3(publicIp) {
+	if findTargetsOnShodan(publicIp) {
 		return Result{Message: fmt.Sprintf("found target on %s", publicIp)}, nil
 	} else {
 		releaseAddress(region, publicIp, allocationId)

@@ -7,35 +7,44 @@ dig $TARGET
 ; <<>> DiG 9.10.6 <<>> $TARGET
 ;; global options: +cmd
 ;; Got answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 52085
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 31371
 ;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
 
 ;; OPT PSEUDOSECTION:
-; EDNS: version: 0, flags:; udp: 512
+; EDNS: version: 0, flags:; udp: 4096
 ;; QUESTION SECTION:
-;$TARGET.       IN      A
+;$TARGET.            IN      A
 
 ;; ANSWER SECTION:
-$TARGET. 13802  IN      A       13.238.199.191
+$TARGET.     300     IN      A       13.55.12.250
 
-;; Query time: 71 msec
-;; SERVER: 8.8.8.8#53(8.8.8.8)
-;; WHEN: Sun Jan 24 22:26:43 AEDT 2021
-;; MSG SIZE  rcvd: 68
+;; Query time: 147 msec
+;; SERVER: 172.21.0.2#53(172.21.0.2)
+;; WHEN: Tue Jan 26 09:05:53 AEDT 2021
+;; MSG SIZE  rcvd: 63
 
-For proof of concept, please visit http://$TARGET
-There will also be a snapshot of this page at https://web.archive.org/web/20210124112139/http://$TARGET/
+# Proof of Concept
+For proof of concept, I have run a server at http://$TARGET
 
+You will see "VGhpcyBpcyBhIHN1YmRvbWFpbiB0YWtlb3ZlciBieSBAY29ycmVrdGhvcnNlCg==" which is base64 encoded for "This is a subdomain takeover by @correkthorse"
+
+I have created a snapshot of this proof of concept on the Internet Archive Wayback Machine at 
+https://web.archive.org/web/20210125220131/http://$TARGET/
+
+# Impact
 This is considered a high impact issue as I can run any service on any port at this subdomain. I can potentially read cookies set from the main domain, perform cross-site scripting, or circumvent content security policies, thereby enabling the ability to capture protected information or send malicious content to unsuspecting users.
 
-For more information about subdomain takeovers please refer to:
-
-https://developer.mozilla.org/en-US/docs/Web/Security/Subdomain_takeovers
-
+# Suggested Fix
 To fix this issue you can:
 
 1. Remove the dangling NS record pointing to this Elastic IP address no longer under your control.
 2. Recover the Elastic IP address from the pool after I have released the association in near future.
 
+For more information about subdomain takeovers please refer to:
+
+https://developer.mozilla.org/en-US/docs/Web/Security/Subdomain_takeovers
+
+
 Regards,
 Tim
+@correkthorse
