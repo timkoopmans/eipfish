@@ -2,10 +2,33 @@
 
 This is an AWS Lambda that runs a small Go binary on a schedule. 
 Each execution of the binary will allocate an Elastic IP (EIP) in the region you specify. 
-It will then check for dangling name server records using a separately hosted RDNS library stored on S3. 
-It checks this using S3 Select. It also checks for historical records using the Shodan API.
+It will then check for dangling name server records using a separately hosted [RDNS library stored on S3](https://github.com/timkoopmans/rdns-fs). 
+It also checks for historical records using the Shodan API.
 
 If there are any matches, it retains the EIP for further use, otherwise it releases the allocation back to the pool.
+
+## Setup
+
+Make sure you provide your own `.env` file with following keys:    
+
+    WEBHOOK_URL="<your own incoming webhook URL for Slack>"
+    BUCKET_NAME="<name of bucket with rDNS data>"
+    BUCKET_REGION="<region of bucket with rDNS data>"
+    SHODAN_API_KEY="<paid subscription to Shodan>"
+
+Install serverless:
+
+    npm install serverless -g
+
+Deploy using your own AWS environment:
+
+    make deploy
+
+## Cost
+
+The cost is approx. $0.007 per execution if you’re interested in this lottery approach to EIP fishing:
+
+    $0.005 per EIP + (5300 ms * $0.0000000021) lambda time + (1 GB * $0.00225) s3 select
 
 ## tl;dr
 
