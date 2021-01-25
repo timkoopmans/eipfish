@@ -3,7 +3,7 @@
 This is an AWS Lambda that runs a small Go binary on a schedule. 
 Each execution of the binary will allocate an Elastic IP (EIP) in the region you specify. 
 It will then check for dangling name server records using a separately hosted [RDNS library stored on S3](https://github.com/timkoopmans/rdns-fs). 
-It also checks for historical records using the Shodan API.
+It also checks for historical records using the [Shodan API](https://developer.shodan.io/api).
 
 If there are any matches, it retains the EIP for further use, otherwise it releases the allocation back to the pool.
 
