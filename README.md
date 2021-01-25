@@ -1,5 +1,7 @@
 # EIP Fishing
 
+![](demo.png)
+
 This is an AWS Lambda that runs a small Go binary on a schedule. 
 Each execution of the binary will allocate an Elastic IP (EIP) in the region you specify. 
 It will then check for dangling name server records using a separately hosted [RDNS library stored on S3](https://github.com/timkoopmans/rdns-fs). 
