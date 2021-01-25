@@ -30,12 +30,6 @@ Monitor via slack:
 
 ![](demo.png)
 
-## Cost
-
-The cost is approx. $0.007 per execution if you’re interested in this lottery approach to EIP fishing:
-
-    $0.005 per EIP + (5300 ms * $0.0000000021) lambda time + (1 GB * $0.00225) s3 select
-
 ## tl;dr
 
 This is a simple lambda that I am using to help discover dangling NS records related to AWS EIPs for bug bounty programs.
