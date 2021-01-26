@@ -22,6 +22,7 @@ import (
 	"github.com/shadowscatcher/shodan"
 	"github.com/shadowscatcher/shodan/search"
 	"github.com/slack-go/slack"
+	"github.com/flowchartsman/retry"
 	"os"
 )
 
@@ -61,7 +62,20 @@ func Handler(event Event) (Result, error){
 	if findTargetsOnShodan(region, publicIp) {
 		return Result{Message: fmt.Sprintf("found target on %s in region %s", publicIp, region)}, nil
 	} else {
-		releaseAddress(region, publicIp, allocationId)
+		retrier := retry.NewRetrier(4, 100 * time.Millisecond, 15 * time.Second)
+
+		err := retrier.Run(func() error {
+			err := releaseAddress(region, publicIp, allocationId)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+		if err != nil {
+			return Result{Message: fmt.Sprintf("problem releasing %s in region %s", publicIp, region)}, err
+		}
+
 		return Result{Message: fmt.Sprintf("no matches on %s in region %s", publicIp, region)}, nil
 	}
 
@@ -86,7 +100,7 @@ func allocateAddress(region string)  (string, string) {
 	return *allocRes.PublicIp, *allocRes.AllocationId
 }
 
-func releaseAddress(region string, publicIp string, allocationId string) {
+func releaseAddress(region string, publicIp string, allocationId string) error {
 	if len(allocationId) > 0 {
 		sess, err := session.NewSession(&aws.Config{
 			Region: aws.String(region)},
@@ -99,14 +113,18 @@ func releaseAddress(region string, publicIp string, allocationId string) {
 		})
 		if err != nil {
 			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == "InvalidAllocationID.NotFound" {
-				exitErrorf("Allocation ID %s does not exist", allocationId)
+				log.Println("Allocation ID %s does not exist", allocationId)
+				return aerr
 			}
-			exitErrorf("Unable to release IP address for allocation %s: %v", allocationId, err)
+			log.Println("Unable to release IP address for allocation %s: %v", allocationId, err)
+			return err
 		}
 
 		log.Printf("Released %s from allocation ID %s\n", publicIp, allocationId)
+		return nil
 	} else {
 		log.Printf("No allocation ID to release for %s\n", publicIp)
+		return nil
 	}
 }
 
