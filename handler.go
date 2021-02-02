@@ -8,21 +8,19 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/s3"
 	"log"
 	"net"
 
 	"net/http"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"context"
+	"github.com/flowchartsman/retry"
 	"github.com/shadowscatcher/shodan"
 	"github.com/shadowscatcher/shodan/search"
 	"github.com/slack-go/slack"
-	"github.com/flowchartsman/retry"
 	"os"
 )
 
@@ -128,61 +126,6 @@ func releaseAddress(region string, publicIp string, allocationId string) error {
 	}
 }
 
-func findTargetsOnS3(publicIp string) bool {
-	firstOctet := strings.Split(publicIp, ".")[0]
-	key := "rdns/rdns." + firstOctet + ".0.0.0.json.gz"
-
-	sess, err := session.NewSession()
-	if err != nil {
-		logErrorf("Unable to establish session in region %q: %v", os.Getenv("BUCKET_REGION"), err)
-		return false
-	}
-
-	svc := s3.New(sess, &aws.Config{
-		Region: aws.String(os.Getenv("BUCKET_REGION")),
-	})
-
-	input := &s3.SelectObjectContentInput{
-		Bucket: aws.String(os.Getenv("BUCKET_NAME")),
-		Key: aws.String(key),
-		ExpressionType: aws.String(s3.ExpressionTypeSql),
-		Expression: aws.String("SELECT * FROM S3Object s WHERE s.name = '" + publicIp + "'"),
-		InputSerialization: &s3.InputSerialization{
-			CompressionType: aws.String("GZIP"),
-			JSON:            &s3.JSONInput{Type: aws.String("LINES")},
-		},
-		OutputSerialization: &s3.OutputSerialization{
-			JSON: &s3.JSONOutput{RecordDelimiter: aws.String("\n")},
-		},
-	}
-
-	out, err := svc.SelectObjectContent(input)
-	if err != nil {
-		logErrorf("Unable to select object content for key %q: %v", key, err)
-		return false
-	}
-	defer out.EventStream.Close()
-
-	for evt := range out.EventStream.Events() {
-		switch e := evt.(type) {
-		case *s3.RecordsEvent:
-			log.Println(string(e.Payload))
-			var record Record
-			json.Unmarshal(e.Payload, &record)
-
-			re := regexp.MustCompile("amazonaws|cloudfront")
-			res := re.MatchString(record.Value)
-			if res {
-				return false
-			}
-
-			notifySlack("<!channel> :fishing_pole_and_fish: found a target: " + record.Value + " at: " + publicIp, "good")
-			return true
-		}
-	}
-	return false
-}
-
 func findTargetsOnShodan(region string, publicIp string) bool {
 	apiKey := os.Getenv("SHODAN_API_KEY")
 	client, _ := shodan.GetClient(apiKey, http.DefaultClient, true)
@@ -222,7 +165,7 @@ func findTargetsOnShodan(region string, publicIp string) bool {
 
 		currentIPs, err := net.LookupIP(uniqueHostname)
 		if err != nil {
-			logErrorf("Fish got away on EIP %s: %v", publicIp, err)
+			log.Printf("Fish got away on EIP %s: %v", publicIp, err)
 		}
 
 		for _, ipAddress := range currentIPs {
