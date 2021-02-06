@@ -5,6 +5,6 @@ do
   for eip in $(aws ec2 describe-addresses --region $region --query 'Addresses[].PublicIp' --output text)
   do
     echo "Releasing $eip from region $region"
-    aws ec2 release-address --region $region --allocation-id $(aws ec2 describe-addresses --public-ip $eip --query Addresses[].AllocationId 2>/dev/null) 2>/dev/null
+    aws ec2 release-address --region $region --allocation-id $(aws ec2 describe-addresses --region $region --public-ip $eip --query 'Addresses[].AllocationId' --output text) --output text > /dev/null 2>&1
   done
 done
