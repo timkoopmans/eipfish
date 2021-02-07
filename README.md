@@ -42,3 +42,8 @@ This is a simple lambda that I am using to help discover dangling NS records rel
     REPORT RequestId: 56cf9c1c-551e-19db-3706-5a95a9480d75  Init Duration: 387.81 ms        Duration: 5264.54 ms    Billed Duration: 5300 ms        Memory Size: 128 MB     Max Memory Used: 35 MB
 
     {"RESULT:":"no matches on 54.186.54.63"}
+
+### Check for bounty programs
+
+    curl -s https://raw.githubusercontent.com/disclose/diodb/master/program-list.json | \
+        jq -r '.[] | select(.program_name|test("mastercard";"i"))'    
