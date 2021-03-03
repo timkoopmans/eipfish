@@ -55,26 +55,21 @@ func Handler(event Event) (Result, error){
 	region := event.Region
 	publicIp, allocationId := allocateAddress(region)
 
+	retryLoop := retry.NewRetrier(4, 100 * time.Millisecond, 15 * time.Second)
+	err := retryLoop.Run(func() error {
+		err := releaseAddress(region, publicIp, allocationId)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
 	log.Printf("Checking %s from allocation ID %s in region %s\n", publicIp, allocationId, region)
 
 	if findTargetsOnShodan(region, publicIp) {
-		return Result{Message: fmt.Sprintf("found target on %s in region %s", publicIp, region)}, nil
+		return Result{Message: fmt.Sprintf("found target on %s in region %s", publicIp, region)}, err
 	} else {
-		retrier := retry.NewRetrier(4, 100 * time.Millisecond, 15 * time.Second)
-
-		err := retrier.Run(func() error {
-			err := releaseAddress(region, publicIp, allocationId)
-			if err != nil {
-				return err
-			}
-
-			return nil
-		})
-		if err != nil {
-			return Result{Message: fmt.Sprintf("problem releasing %s in region %s", publicIp, region)}, err
-		}
-
-		return Result{Message: fmt.Sprintf("no matches on %s in region %s", publicIp, region)}, nil
+		return Result{Message: fmt.Sprintf("no matches on %s in region %s", publicIp, region)}, err
 	}
 }
 
