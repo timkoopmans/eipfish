@@ -76,8 +76,6 @@ func Handler(event Event) (Result, error){
 
 		return Result{Message: fmt.Sprintf("no matches on %s in region %s", publicIp, region)}, nil
 	}
-
-	return Result{Message: fmt.Sprintf("processed %s in region %s", publicIp, region)}, nil
 }
 
 func allocateAddress(region string)  (string, string) {
@@ -204,15 +202,7 @@ func notifySlack(message string, color string) {
 	}
 }
 
-func logErrorf(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, msg+"\n", args...)
-	message := fmt.Sprintf(msg+"\n", args...)
-	notifySlack("<!channel> :warning: " + message, "bad")
-}
-
 func exitErrorf(msg string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, msg+"\n", args...)
-	message := fmt.Sprintf(msg+"\n", args...)
-	notifySlack("<!channel> :rotating_light: " + message, "bad")
 	os.Exit(1)
 }
