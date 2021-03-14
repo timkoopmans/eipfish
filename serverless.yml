@@ -76,6 +76,20 @@ functions:
           input:
             region: us-east-1
             bucket: ${env:BUCKET_NAME}
+  bluegills:
+    handler: bin/handler
+    environment:
+      BUCKET_NAME: ${env:BUCKET_NAME}
+      BUCKET_REGION: ${env:BUCKET_REGION}
+      WEBHOOK_URL: ${env:WEBHOOK_URL}
+      SHODAN_API_KEY: ${env:SHODAN_API_KEY}
+    events:
+      - schedule:
+          rate: rate(3 minutes)
+          enabled: true
+          input:
+            region: us-east-2
+            bucket: ${env:BUCKET_NAME}
   cod:
     handler: bin/handler
     environment:
@@ -103,4 +117,32 @@ functions:
           enabled: true
           input:
             region: eu-west-2
+            bucket: ${env:BUCKET_NAME}
+  steckerlfisch:
+    handler: bin/handler
+    environment:
+      BUCKET_NAME: ${env:BUCKET_NAME}
+      BUCKET_REGION: ${env:BUCKET_REGION}
+      WEBHOOK_URL: ${env:WEBHOOK_URL}
+      SHODAN_API_KEY: ${env:SHODAN_API_KEY}
+    events:
+      - schedule:
+          rate: rate(3 minutes)
+          enabled: true
+          input:
+            region: eu-central-1
+            bucket: ${env:BUCKET_NAME}
+  crabbeehoon:
+    handler: bin/handler
+    environment:
+      BUCKET_NAME: ${env:BUCKET_NAME}
+      BUCKET_REGION: ${env:BUCKET_REGION}
+      WEBHOOK_URL: ${env:WEBHOOK_URL}
+      SHODAN_API_KEY: ${env:SHODAN_API_KEY}
+    events:
+      - schedule:
+          rate: rate(3 minutes)
+          enabled: true
+          input:
+            region: ap-southeast-1
             bucket: ${env:BUCKET_NAME}
