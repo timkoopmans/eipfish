@@ -13,7 +13,7 @@ destroy:
 	sls remove
 
 invoke:
-	sls invoke -f fish --data '{"region": "ap-southeast-2"}'
+	sls invoke -f barramundi --data '{"region": "ap-southeast-2"}'
 
 test:
-	SLS_DEBUG=* sls invoke local -f fish --data '{"region": "ap-southeast-2"}'
+	SLS_DEBUG=* sls invoke local -f barramundi --data '{"region": "ap-southeast-2"}'

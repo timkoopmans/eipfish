@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"context"
+	"github.com/bobesa/go-domain-util/domainutil"
 	"github.com/flowchartsman/retry"
 	"github.com/shadowscatcher/shodan"
 	"github.com/shadowscatcher/shodan/search"
@@ -40,37 +41,72 @@ type Record struct {
 	Type string
 }
 
+type DiscloseProgram struct {
+	ProgramName string `json:"program_name"`
+	PolicyURL string `json:"policy_url"`
+	ContactURL string  `json:"contact_url"`
+	LaunchDate string  `json:"launch_date"`
+	OffersBounty string  `json:"offers_bounty"`
+	//OffersSwag string  `json:"offers_swag"`
+	HallOfFame string  `json:"hall_of_fame"`
+	SafeHarbor string  `json:"safe_harbor"`
+	PublicDisclosure string  `json:"public_disclosure"`
+	PgpKey string  `json:"pgp_key"`
+	Hiring string  `json:"hiring"`
+	SecurityTextURL string  `json:"securitytxt_url"`
+	PreferredLanguages string  `json:"preferred_languages"`
+	PolicyURLStatus string  `json:"policy_url_status"`
+}
+
 func main() {
 	lambda.Start(Handler)
 	//Debug()
 }
 
 func Debug() {
-	publicIp := "52.89.70.92"
-	region := "ap-southeast-2"
-	findTargetsOnShodan(region, publicIp)
+	publicIp := "52.6.170.149"
+	region := "us-east-1"
+	target := findTargetsOnShodan(region, publicIp)
+	if target != "" {
+		bounty := findBountiesOnDisclose(target)
+
+		if bounty {
+			notifySlack("<!channel> :fishing_pole_and_fish: caught a *BIG* fish " + region + " at " + target + " on " + publicIp, "bad")
+		} else {
+			notifySlack(":fishing_pole_and_fish: caught a fish in " + region + " at " + target + " on " + publicIp, "good")
+		}
+	}
 }
 
 func Handler(event Event) (Result, error){
 	region := event.Region
 	publicIp, allocationId := allocateAddress(region)
 
-	retryLoop := retry.NewRetrier(4, 100 * time.Millisecond, 15 * time.Second)
-	err := retryLoop.Run(func() error {
-		err := releaseAddress(region, publicIp, allocationId)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
 	log.Printf("Checking %s from allocation ID %s in region %s\n", publicIp, allocationId, region)
 
-	if findTargetsOnShodan(region, publicIp) {
-		return Result{Message: fmt.Sprintf("found target on %s in region %s", publicIp, region)}, err
-	} else {
-		return Result{Message: fmt.Sprintf("no matches on %s in region %s", publicIp, region)}, err
+	target := findTargetsOnShodan(region, publicIp)
+	if target != "" {
+		bounty := findBountiesOnDisclose(target)
+
+		if bounty {
+			notifySlack("<!channel> :fishing_pole_and_fish: caught a *BIG* fish " + region + " at " + target + " on " + publicIp, "bad")
+			return Result{Message: fmt.Sprintf("found target on %s in region %s", publicIp, region)}, nil
+		} else {
+			notifySlack(":fishing_pole_and_fish: caught a fish in " + region + " at " + target + " on " + publicIp, "good")
+			retryLoop := retry.NewRetrier(4, 100 * time.Millisecond, 15 * time.Second)
+			err := retryLoop.Run(func() error {
+				err := releaseAddress(region, publicIp, allocationId)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+			if err != nil {
+				return Result{Message: fmt.Sprintf("no matches on %s in region %s", publicIp, region)}, err
+			}
+		}
 	}
+	return Result{Message: fmt.Sprintf("no matches on %s in region %s", publicIp, region)}, nil
 }
 
 func allocateAddress(region string)  (string, string) {
@@ -119,7 +155,7 @@ func releaseAddress(region string, publicIp string, allocationId string) error {
 	}
 }
 
-func findTargetsOnShodan(region string, publicIp string) bool {
+func findTargetsOnShodan(region string, publicIp string) string {
 	apiKey := os.Getenv("SHODAN_API_KEY")
 	client, _ := shodan.GetClient(apiKey, http.DefaultClient, true)
 	ctx := context.Background()
@@ -132,7 +168,7 @@ func findTargetsOnShodan(region string, publicIp string) bool {
 	result, err := client.Host(ctx, hostSearch)
 	if err != nil {
 		log.Println("Unable to search Shodan for %s: %v", publicIp, err)
-		return false
+		return ""
 	}
 
 	hostnames := make(map[string]bool)
@@ -163,9 +199,56 @@ func findTargetsOnShodan(region string, publicIp string) bool {
 
 		for _, ipAddress := range currentIPs {
 			if ipAddress.Equal(net.ParseIP(publicIp)) {
-				notifySlack("<!channel> :fishing_pole_and_fish: caught a fish in " + region + " at " + uniqueHostname + " on " + publicIp, "good")
-				return true
+				return uniqueHostname
 			}
+		}
+	}
+
+	return ""
+}
+
+func findBountiesOnDisclose(target string) bool {
+	domain := domainutil.Domain(target)
+	apiURL := "https://raw.githubusercontent.com/disclose/diodb/master/program-list.json"
+	resp, err := http.Get(apiURL)
+	if err != nil {
+		log.Println("Unable to get Disclose for %s: %v", domain, err)
+		return false
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Unable to receive Disclose for %s: %v", domain, err)
+		return false
+	}
+
+	programs := make([]DiscloseProgram, 0)
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&programs)
+
+	if err != nil {
+		log.Println("Unable to parse Disclose for %s: %v", domain, err)
+		return false
+	}
+
+	for _, program := range programs {
+		domainRE := regexp.MustCompile(domain)
+		ProgramNameMatch := domainRE.MatchString(program.ProgramName)
+		if ProgramNameMatch {
+			return true
+		}
+		PolicyURLMatch := domainRE.MatchString(program.PolicyURL)
+		if PolicyURLMatch {
+			return true
+		}
+		ContactURLMatch := domainRE.MatchString(program.ContactURL)
+		if ContactURLMatch {
+			return true
+		}
+		SecurityTextURLMatch := domainRE.MatchString(program.SecurityTextURL)
+		if SecurityTextURLMatch {
+			return true
 		}
 	}
 
