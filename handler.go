@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/flowchartsman/retry"
 	"log"
 	"net"
 
@@ -18,7 +19,6 @@ import (
 
 	"context"
 	"github.com/bobesa/go-domain-util/domainutil"
-	"github.com/flowchartsman/retry"
 	"github.com/shadowscatcher/shodan"
 	"github.com/shadowscatcher/shodan/search"
 	"github.com/slack-go/slack"
@@ -93,20 +93,17 @@ func Handler(event Event) (Result, error){
 			return Result{Message: fmt.Sprintf("found target on %s in region %s", publicIp, region)}, nil
 		} else {
 			notifySlack(":fishing_pole_and_fish: caught a fish in " + region + " at " + target + " on " + publicIp, "good")
-			retryLoop := retry.NewRetrier(4, 100 * time.Millisecond, 15 * time.Second)
-			err := retryLoop.Run(func() error {
-				err := releaseAddress(region, publicIp, allocationId)
-				if err != nil {
-					return err
-				}
-				return nil
-			})
-			if err != nil {
-				return Result{Message: fmt.Sprintf("no matches on %s in region %s", publicIp, region)}, err
-			}
 		}
 	}
-	return Result{Message: fmt.Sprintf("no matches on %s in region %s", publicIp, region)}, nil
+	retryLoop := retry.NewRetrier(4, 100 * time.Millisecond, 15 * time.Second)
+	err := retryLoop.Run(func() error {
+		err := releaseAddress(region, publicIp, allocationId)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return Result{Message: fmt.Sprintf("no matches on %s in region %s", publicIp, region)}, err
 }
 
 func allocateAddress(region string)  (string, string) {
